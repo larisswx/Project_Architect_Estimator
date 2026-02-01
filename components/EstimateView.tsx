@@ -1,13 +1,14 @@
 
 import React from 'react';
-import { ProjectEstimate } from '../types';
+import { ProjectEstimate, DeliveryBlock } from '../types';
 
 interface EstimateViewProps {
   estimate: ProjectEstimate;
 }
 
 export const EstimateView: React.FC<EstimateViewProps> = ({ estimate }) => {
-  const deliveryEntries = Object.entries(estimate.deliveryBreakdown);
+  // Add explicit type casting for delivery breakdown entries to fix TS unknown type errors
+  const deliveryEntries = Object.entries(estimate.deliveryBreakdown) as [string, DeliveryBlock][];
 
   // Helper to calculate total project costs/resource mix
   const hasDev = estimate.projectSchedule.weeklyPlan.some(w => w.resourceAllocation.technicalConsultant > 0);

@@ -26,7 +26,7 @@ const App: React.FC = () => {
       try {
         setProjects(JSON.parse(saved));
       } catch (e) {
-        console.error("[ArchitectEstimator] LocalStorage Load Error:", e);
+        console.error("[EnterpriseDelivery] LocalStorage Load Error:", e);
       }
     }
   }, []);
@@ -36,12 +36,12 @@ const App: React.FC = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
     } catch (e) {
-      console.error("[ArchitectEstimator] LocalStorage Save Error:", e);
+      console.error("[EnterpriseDelivery] LocalStorage Save Error:", e);
     }
   }, [projects]);
 
   const handleGenerate = async (inputs: ProjectInputs) => {
-    console.info(`[ArchitectEstimator] Starting estimation for: ${inputs.projectName}`);
+    console.info(`[EnterpriseDelivery] Starting estimation for: ${inputs.projectName}`);
     setLoading(true);
     setError(null);
     try {
@@ -64,9 +64,9 @@ const App: React.FC = () => {
       setEstimate(enrichedEstimate);
       setView('result');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      console.info("[ArchitectEstimator] Generation complete.");
+      console.info("[EnterpriseDelivery] Generation complete.");
     } catch (err: any) {
-      console.error("[ArchitectEstimator] AI Generation Failure:", err);
+      console.error("[EnterpriseDelivery] AI Generation Failure:", err);
       
       let userFriendlyMessage = 'An unexpected error occurred. Please check your API configuration.';
       
@@ -94,7 +94,7 @@ const App: React.FC = () => {
 
   const handleDeleteProject = (id: string) => {
     if (window.confirm('Are you sure you want to delete this estimate?')) {
-      console.debug(`[ArchitectEstimator] Deleting project: ${id}`);
+      console.debug(`[EnterpriseDelivery] Deleting project: ${id}`);
       setProjects(prev => prev.filter(p => p.id !== id));
       setSelectedProjectIds(prev => prev.filter(pid => pid !== id));
     }
@@ -108,7 +108,7 @@ const App: React.FC = () => {
 
   const handleCompare = () => {
     if (selectedProjectIds.length < 2) {
-      console.warn("[ArchitectEstimator] Comparison requires at least 2 selected projects.");
+      console.warn("[EnterpriseDelivery] Comparison requires at least 2 selected projects.");
       return;
     }
     setView('compare');
@@ -128,8 +128,8 @@ const App: React.FC = () => {
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Enterprise Architect</h1>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-tight">Project Estimator Tool</p>
+              <h1 className="text-lg font-bold text-slate-900 leading-none">ENTERPRISE DELIVERY</h1>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Intelligence Platform</p>
             </div>
           </div>
           

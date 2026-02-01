@@ -1,5 +1,5 @@
 
-# Enterprise Project Architect Estimator
+# ENTERPRISE DELIVERY INTELLIGENCE PLATFORM
 
 A high-fidelity tool designed for Senior Solutions Architects and Technical Leads to generate realistic, conservative, and professional software project estimations for enterprise clients.
 
@@ -50,3 +50,4 @@ Estimating enterprise software is notoriously difficult due to integration compl
 
 ---
 
+*Built for Senior Architects who value realism over optimism.*

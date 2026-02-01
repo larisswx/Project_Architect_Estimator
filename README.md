@@ -50,4 +50,3 @@ Estimating enterprise software is notoriously difficult due to integration compl
 
 ---
 
-*Built for Senior Architects who value realism over optimism.*

@@ -6,17 +6,26 @@ interface ProjectDashboardProps {
   projects: ProjectEstimate[];
   onViewProject: (project: ProjectEstimate) => void;
   onDeleteProject: (id: string) => void;
+  selectedProjectIds: string[];
+  onToggleSelect: (id: string) => void;
 }
 
-export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, onViewProject, onDeleteProject }) => {
+export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ 
+  projects, 
+  onViewProject, 
+  onDeleteProject,
+  selectedProjectIds,
+  onToggleSelect
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterConfidence, setFilterConfidence] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'date' | 'hours' | 'name'>('date');
 
   const stats = useMemo(() => {
     const totalHours = projects.reduce((acc, p) => acc + p.totalHours, 0);
+    const highConfCount = projects.filter(p => p.confidenceLevel.toLowerCase() === 'alta' || p.confidenceLevel.toLowerCase() === 'high').length;
     const avgConfidence = projects.length > 0 
-      ? (projects.filter(p => p.confidenceLevel === 'High').length / projects.length * 100).toFixed(0)
+      ? (highConfCount / projects.length * 100).toFixed(0)
       : 0;
     return { totalHours, avgConfidence, count: projects.length };
   }, [projects]);
@@ -25,7 +34,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
     return projects
       .filter(p => {
         const matchesSearch = p.projectName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesConfidence = filterConfidence === 'All' || p.confidenceLevel === filterConfidence;
+        const matchesConfidence = filterConfidence === 'All' || p.confidenceLevel.toLowerCase() === filterConfidence.toLowerCase();
         return matchesSearch && matchesConfidence;
       })
       .sort((a, b) => {
@@ -37,7 +46,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
 
   const getConfidenceBadge = (level: string) => {
     switch (level.toLowerCase()) {
+      case 'alta':
       case 'high': return 'bg-emerald-100 text-emerald-700';
+      case 'média':
       case 'medium': return 'bg-amber-100 text-amber-700';
       default: return 'bg-rose-100 text-rose-700';
     }
@@ -80,9 +91,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
             onChange={(e) => setFilterConfidence(e.target.value)}
           >
             <option value="All">All Confidence</option>
-            <option value="High">High Only</option>
-            <option value="Medium">Medium Only</option>
-            <option value="Low">Low Only</option>
+            <option value="Alta">Alta Only</option>
+            <option value="Média">Média Only</option>
+            <option value="Baixa">Baixa Only</option>
           </select>
           <select 
             className="px-4 py-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
@@ -102,6 +113,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-4 w-10"></th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Project Name</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Complexity</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Confidence</th>
@@ -112,7 +124,15 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
             <tbody className="divide-y divide-slate-100">
               {filteredAndSortedProjects.length > 0 ? (
                 filteredAndSortedProjects.map((project) => (
-                  <tr key={project.id} className="hover:bg-slate-50 transition-colors group">
+                  <tr key={project.id} className={`hover:bg-slate-50 transition-colors group ${selectedProjectIds.includes(project.id) ? 'bg-blue-50/50' : ''}`}>
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedProjectIds.includes(project.id)}
+                        onChange={() => onToggleSelect(project.id)}
+                        className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-slate-900">{project.projectName}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{new Date(project.createdAt).toLocaleDateString()}</p>
@@ -146,7 +166,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ projects, on
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     No projects found matching your criteria.
                   </td>
                 </tr>

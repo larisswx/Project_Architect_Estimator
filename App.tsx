@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { ProjectInput } from './components/ProjectInput';
 import { EstimateView } from './components/EstimateView';
 import { ProjectDashboard } from './components/ProjectDashboard';
+import { ProjectComparison } from './components/ProjectComparison';
 import { ProjectInputs, ProjectEstimate } from './types';
 import { generateProjectEstimate } from './services/geminiService';
 
-type View = 'dashboard' | 'input' | 'result';
+type View = 'dashboard' | 'input' | 'result' | 'compare';
 
 const STORAGE_KEY = 'enterprise_estimates_v1';
 
@@ -15,6 +16,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [estimate, setEstimate] = useState<ProjectEstimate | null>(null);
   const [projects, setProjects] = useState<ProjectEstimate[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Load projects from localStorage on mount
@@ -44,7 +46,9 @@ const App: React.FC = () => {
         ...result,
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
-        complexity: inputs.complexity
+        complexity: inputs.complexity,
+        clientMaturity: inputs.clientMaturity,
+        externalDependency: inputs.externalDependency
       };
 
       setProjects(prev => [enrichedEstimate, ...prev]);
@@ -67,8 +71,22 @@ const App: React.FC = () => {
   const handleDeleteProject = (id: string) => {
     if (window.confirm('Are you sure you want to delete this estimate?')) {
       setProjects(prev => prev.filter(p => p.id !== id));
+      setSelectedProjectIds(prev => prev.filter(pid => pid !== id));
     }
   };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedProjectIds(prev => 
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
+  };
+
+  const handleCompare = () => {
+    if (selectedProjectIds.length < 2) return;
+    setView('compare');
+  };
+
+  const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
@@ -107,14 +125,27 @@ const App: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {view === 'dashboard' && (
           <div className="animate-in fade-in duration-500">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-slate-900 mb-2">Project Portfolio</h2>
-              <p className="text-slate-600">Overview of all software estimations generated for enterprise clients.</p>
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-2">Project Portfolio</h2>
+                <p className="text-slate-600">Overview of all software estimations generated for enterprise clients.</p>
+              </div>
+              {selectedProjectIds.length > 1 && (
+                <button
+                  onClick={handleCompare}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-lg flex items-center gap-2 transition-all transform hover:scale-105"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                  Compare {selectedProjectIds.length} Estimates
+                </button>
+              )}
             </div>
             <ProjectDashboard 
               projects={projects} 
               onViewProject={handleViewProject} 
               onDeleteProject={handleDeleteProject}
+              selectedProjectIds={selectedProjectIds}
+              onToggleSelect={handleToggleSelect}
             />
           </div>
         )}
@@ -144,6 +175,22 @@ const App: React.FC = () => {
               </div>
             </div>
             <EstimateView estimate={estimate} />
+          </div>
+        )}
+
+        {view === 'compare' && (
+          <div className="animate-in fade-in duration-500">
+            <div className="flex items-center justify-between mb-8 no-print">
+              <button 
+                onClick={() => setView('dashboard')}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                Back to Portfolio
+              </button>
+              <h2 className="text-2xl font-bold text-slate-900">Estimate Comparison</h2>
+            </div>
+            <ProjectComparison projects={selectedProjects} />
           </div>
         )}
 

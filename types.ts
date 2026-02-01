@@ -5,17 +5,29 @@ export interface TimelinePhase {
   description: string;
 }
 
+export interface BlockEstimation {
+  blockName: string;
+  baseHours: number;
+  complexity: 'Baixa' | 'Média' | 'Alta';
+  estimatedHours: number;
+}
+
 export interface ProjectEstimate {
   id: string;
   createdAt: string;
   projectName: string;
   totalHours: number;
-  confidenceLevel: 'Low' | 'Medium' | 'High';
+  scHours: number;
+  techHours: number;
+  confidenceLevel: 'Baixa' | 'Média' | 'Alta';
+  blockBreakdown: BlockEstimation[];
   timelinePhases: TimelinePhase[];
   technicalRisks: string[];
   assumptions: string[];
   executiveSummary: string;
-  complexity: string; // Added complexity from inputs
+  complexity: string;
+  clientMaturity: string;
+  externalDependency: string;
 }
 
 export interface ProjectInputs {
@@ -24,5 +36,7 @@ export interface ProjectInputs {
   techStack: string;
   teamSize: string;
   complexity: 'Simple' | 'Moderate' | 'Complex' | 'Enterprise-Scale';
+  clientMaturity: 'Alta' | 'Média' | 'Baixa';
+  externalDependency: 'Baixa' | 'Média' | 'Alta';
   constraints: string;
 }

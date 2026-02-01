@@ -29,13 +29,20 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      const errorMsg = `Unsupported file type: ${file.type}. Please use JPG, PNG, WEBP or PDF.`;
-      console.error('[ArchitectEstimator] File Validation Error:', errorMsg);
+      const errorMsg = `Unsupported file type: "${file.type}". Allowed: JPG, PNG, WEBP, PDF.`;
+      console.error(`[ArchitectEstimator] Validation Error: ${errorMsg}`, {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024).toFixed(2)} KB`,
+        fileType: file.type
+      });
       return errorMsg;
     }
     if (file.size > MAX_FILE_SIZE) {
-      const errorMsg = `File size too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Max limit is 5MB.`;
-      console.error('[ArchitectEstimator] File Validation Error:', errorMsg);
+      const errorMsg = `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum allowed is 5MB.`;
+      console.error(`[ArchitectEstimator] Validation Error: ${errorMsg}`, {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`
+      });
       return errorMsg;
     }
     return null;
@@ -54,18 +61,26 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
       return;
     }
 
-    console.debug('[ArchitectEstimator] Processing attachment:', file.name, file.type);
+    console.debug('[ArchitectEstimator] Processing valid attachment:', {
+      name: file.name,
+      type: file.type,
+      size: `${(file.size / 1024).toFixed(2)} KB`
+    });
+
     const reader = new FileReader();
     
     reader.onerror = (err) => {
-      const errorMsg = 'Failed to read the selected file. Please try again.';
-      console.error('[ArchitectEstimator] FileReader Error:', err);
+      const errorMsg = 'Critical Error: Failed to read the selected file. The file might be corrupted or locked.';
+      console.error('[ArchitectEstimator] FileReader Critical Error:', err);
       setFileError(errorMsg);
     };
 
     reader.onloadend = () => {
       try {
-        const base64String = (reader.result as string).split(',')[1];
+        const result = reader.result as string;
+        if (!result) throw new Error("File reader result is empty");
+        
+        const base64String = result.split(',')[1];
         setInputs(prev => ({
           ...prev,
           attachment: {
@@ -74,10 +89,10 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
             fileName: file.name
           }
         }));
-        console.info('[ArchitectEstimator] Attachment loaded successfully.');
+        console.info('[ArchitectEstimator] Attachment encoded and ready for AI analysis.');
       } catch (err) {
-        console.error('[ArchitectEstimator] Data Processing Error:', err);
-        setFileError('Error processing file data. File might be corrupted.');
+        console.error('[ArchitectEstimator] Base64 Encoding Error:', err);
+        setFileError('Processing Error: Could not prepare file for AI analysis.');
       }
     };
     reader.readAsDataURL(file);
@@ -87,13 +102,13 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
     setInputs(prev => ({ ...prev, attachment: null }));
     setFileError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    console.debug('[ArchitectEstimator] Attachment removed by user.');
+    console.debug('[ArchitectEstimator] Attachment cleared.');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputs.projectName.trim() || !inputs.description.trim()) {
-      console.warn('[ArchitectEstimator] Validation Failed: Empty project name or description.');
+      console.warn('[ArchitectEstimator] Submit Blocked: Missing mandatory fields.');
       return;
     }
     onSubmit(inputs);
@@ -158,12 +173,15 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
       </div>
 
       <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-bold text-slate-700">Anexar Diagrama BPMN / Processo (Imagem ou PDF)</label>
-          {fileError && <span className="text-xs font-bold text-rose-600 animate-pulse">{fileError}</span>}
-        </div>
+        <label className="text-sm font-bold text-slate-700">Anexar Diagrama BPMN / Processo (Imagem ou PDF)</label>
         <div 
-          className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 ${inputs.attachment ? 'border-blue-500 bg-blue-50' : fileError ? 'border-rose-300 bg-rose-50' : 'border-slate-300'}`}
+          className={`group border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center cursor-pointer ${
+            inputs.attachment 
+              ? 'border-blue-500 bg-blue-50' 
+              : fileError 
+                ? 'border-rose-400 bg-rose-50' 
+                : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+          }`}
           onClick={() => fileInputRef.current?.click()}
         >
           <input 
@@ -173,31 +191,44 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
             accept=".jpg,.jpeg,.png,.webp,.pdf"
             onChange={handleFileChange}
           />
+          
           {inputs.attachment ? (
             <div className="flex items-center gap-4 w-full">
-              <div className="w-12 h-12 bg-blue-600 rounded flex items-center justify-center text-white shrink-0">
+              <div className="w-12 h-12 bg-blue-600 rounded flex items-center justify-center text-white shrink-0 shadow-lg">
                 {inputs.attachment.mimeType.includes('pdf') ? 'PDF' : 'IMG'}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-slate-900 truncate">{inputs.attachment.fileName}</p>
-                <p className="text-xs text-slate-500">Arquivo pronto para análise técnica</p>
+                <p className="text-xs text-slate-500">Arquivo verificado e pronto para análise</p>
               </div>
               <button 
                 type="button"
                 onClick={(e) => { e.stopPropagation(); removeAttachment(); }}
-                className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                className="p-2 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
+                title="Remover anexo"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
             </div>
           ) : (
-            <>
-              <svg className={`w-10 h-10 ${fileError ? 'text-rose-400' : 'text-slate-400'} mb-2`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-              <p className={`text-sm font-medium ${fileError ? 'text-rose-600' : 'text-slate-600'}`}>
-                {fileError ? 'Try a different file' : 'Clique ou arraste o diagrama do processo'}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">Suporta JPG, PNG, WEBP e PDF (Max 5MB)</p>
-            </>
+            <div className="text-center">
+              <svg className={`w-12 h-12 mx-auto mb-3 transition-colors ${fileError ? 'text-rose-500' : 'text-slate-400 group-hover:text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              
+              {fileError ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-black text-rose-600">Erro no Anexo</p>
+                  <p className="text-xs font-bold text-rose-500 bg-rose-100/50 px-3 py-1 rounded-full">{fileError}</p>
+                  <p className="text-[10px] text-rose-400 mt-2">Clique para tentar novamente</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-slate-700">Clique ou arraste o diagrama do processo</p>
+                  <p className="text-xs text-slate-500 mt-1">Formatos aceitos: JPG, PNG, WEBP e PDF (Limite: 5MB)</p>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -214,7 +245,7 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
         />
       </div>
 
-      <div className={`p-4 rounded-xl border flex items-center justify-between transition-colors ${isForcedDeepThinking ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+      <div className={`p-4 rounded-xl border flex items-center justify-between transition-colors ${isForcedDeepThinking ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isForcedDeepThinking ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +285,7 @@ export const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit, isLoading 
           type="submit" 
           variant="secondary" 
           isLoading={isLoading} 
-          className="w-full"
+          className="w-full h-12 text-base font-black uppercase tracking-wider"
         >
           { (isForcedDeepThinking || inputs.deepThinking) ? "Processar com Análise Profunda" : "Calcular Estimativa Técnica"}
         </Button>

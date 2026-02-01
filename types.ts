@@ -25,9 +25,16 @@ export interface ProjectEstimate {
   technicalRisks: string[];
   assumptions: string[];
   executiveSummary: string;
+  logicExplanation: string; // Explicabilidade da IA
   complexity: string;
   clientMaturity: string;
   externalDependency: string;
+}
+
+export interface Attachment {
+  data: string;
+  mimeType: string;
+  fileName: string;
 }
 
 export interface ProjectInputs {
@@ -39,4 +46,6 @@ export interface ProjectInputs {
   clientMaturity: 'Alta' | 'Média' | 'Baixa';
   externalDependency: 'Baixa' | 'Média' | 'Alta';
   constraints: string;
+  deepThinking: boolean;
+  attachment: Attachment | null;
 }

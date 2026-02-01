@@ -26,22 +26,31 @@ const App: React.FC = () => {
       try {
         setProjects(JSON.parse(saved));
       } catch (e) {
-        console.error("Failed to load projects", e);
+        console.error("[ArchitectEstimator] LocalStorage Load Error:", e);
       }
     }
   }, []);
 
   // Save projects to localStorage when they change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    } catch (e) {
+      console.error("[ArchitectEstimator] LocalStorage Save Error:", e);
+    }
   }, [projects]);
 
   const handleGenerate = async (inputs: ProjectInputs) => {
+    console.info(`[ArchitectEstimator] Starting estimation for: ${inputs.projectName}`);
     setLoading(true);
     setError(null);
     try {
       const result = await generateProjectEstimate(inputs);
       
+      if (!result || !result.projectName) {
+        throw new Error("Invalid response received from the Architecture AI. Please try again.");
+      }
+
       const enrichedEstimate: ProjectEstimate = {
         ...result,
         id: crypto.randomUUID(),
@@ -55,8 +64,23 @@ const App: React.FC = () => {
       setEstimate(enrichedEstimate);
       setView('result');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      console.info("[ArchitectEstimator] Generation complete.");
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred. Please check your API configuration.');
+      console.error("[ArchitectEstimator] AI Generation Failure:", err);
+      
+      let userFriendlyMessage = 'An unexpected error occurred. Please check your API configuration.';
+      
+      if (err.message?.includes('API key')) {
+        userFriendlyMessage = 'Architectural Engine API Key is invalid or missing.';
+      } else if (err.message?.includes('thinkingBudget')) {
+        userFriendlyMessage = 'Thinking Budget exceeded model limits. Try reducing complexity.';
+      } else if (err.message?.includes('JSON')) {
+        userFriendlyMessage = 'The AI returned a malformed estimation. This sometimes happens with highly complex diagrams. Please try re-submitting.';
+      } else if (err.status === 429) {
+        userFriendlyMessage = 'Rate limit exceeded. Please wait a few seconds before trying again.';
+      }
+
+      setError(`${userFriendlyMessage} (Debug: ${err.message || 'Unknown'})`);
     } finally {
       setLoading(false);
     }
@@ -70,6 +94,7 @@ const App: React.FC = () => {
 
   const handleDeleteProject = (id: string) => {
     if (window.confirm('Are you sure you want to delete this estimate?')) {
+      console.debug(`[ArchitectEstimator] Deleting project: ${id}`);
       setProjects(prev => prev.filter(p => p.id !== id));
       setSelectedProjectIds(prev => prev.filter(pid => pid !== id));
     }
@@ -82,7 +107,10 @@ const App: React.FC = () => {
   };
 
   const handleCompare = () => {
-    if (selectedProjectIds.length < 2) return;
+    if (selectedProjectIds.length < 2) {
+      console.warn("[ArchitectEstimator] Comparison requires at least 2 selected projects.");
+      return;
+    }
     setView('compare');
   };
 
@@ -113,7 +141,7 @@ const App: React.FC = () => {
               Portfolio Dashboard
             </button>
             <button 
-              onClick={() => { setEstimate(null); setView('input'); }}
+              onClick={() => { setEstimate(null); setError(null); setView('input'); }}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${view === 'input' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
             >
               + New Estimate
@@ -123,6 +151,20 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-xl mb-8 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-4">
+              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-600">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+
         {view === 'dashboard' && (
           <div className="animate-in fade-in duration-500">
             <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -191,15 +233,6 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-bold text-slate-900">Estimate Comparison</h2>
             </div>
             <ProjectComparison projects={selectedProjects} />
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-xl mt-8 flex items-center gap-4">
-            <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p>{error}</p>
           </div>
         )}
       </main>
